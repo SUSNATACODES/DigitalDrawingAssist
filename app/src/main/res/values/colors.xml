@@ -1,27 +1,8 @@
 <resources>
-
-    <!-- Primary Brand -->
-    <color name="primary">#6C63FF</color>
-    <color name="primary_dark">#4A42CC</color>
-    <color name="accent">#00C896</color>
-
-    <!-- Backgrounds -->
-    <color name="bg_light">#F5F5F5</color>
-    <color name="bg_dark">#1E1E1E</color>
-    <color name="card_bg">#2C2C2C</color>
-
-    <!-- Text -->
-    <color name="text_primary">#111111</color>
-    <color name="text_secondary">#777777</color>
-    <color name="text_white">#FFFFFF</color>
-
-    <!-- Buttons -->
-    <color name="btn_primary">#6C63FF</color>
-    <color name="btn_success">#00C896</color>
-    <color name="btn_disabled">#555555</color>
-
-    <!-- Overlay -->
-    <color name="overlay_dark">#DD222222</color>
+    <color name="purple_500">#FF6200EE</color>
+    <color name="teal_200">#FF03DAC5</color>
+    <color name="black">#FF000000</color>
+    <color name="white">#FFFFFFFF</color>
+    <color name="dark_overlay">#DD222222</color>
     <color name="control_bg">#CC000000</color>
-
 </resources>
