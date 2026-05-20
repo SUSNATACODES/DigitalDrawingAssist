@@ -5,4 +5,16 @@
     <color name="white">#FFFFFFFF</color>
     <color name="dark_overlay">#DD222222</color>
     <color name="control_bg">#CC000000</color>
+
+    <color name="dda_ink">#17181F</color>
+    <color name="dda_muted">#656A76</color>
+    <color name="dda_surface">#FAFFFFFF</color>
+    <color name="dda_surface_soft">#FFF7F1</color>
+    <color name="dda_primary">#FF5F6D</color>
+    <color name="dda_teal">#20BFA9</color>
+    <color name="dda_coral">#E85757</color>
+    <color name="dda_sun">#FFD166</color>
+    <color name="dda_line">#2217181F</color>
+    <color name="dda_bg_top">#F5FBFF</color>
+    <color name="dda_bg_bottom">#FFF5EE</color>
 </resources>

@@ -1,8 +1,12 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
-    <!-- Base application theme. -->
     <style name="Base.Theme.DigitalDrawingAssist" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- Customize your light theme here. -->
-        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="colorPrimary">@color/dda_primary</item>
+        <item name="colorSecondary">@color/dda_teal</item>
+        <item name="colorTertiary">@color/dda_sun</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:navigationBarColor">@color/dda_bg_bottom</item>
+        <item name="android:statusBarColor">@color/dda_bg_top</item>
+        <item name="android:windowLightStatusBar" tools:targetApi="m">true</item>
     </style>
 
     <style name="Theme.DigitalDrawingAssist" parent="Base.Theme.DigitalDrawingAssist" />
