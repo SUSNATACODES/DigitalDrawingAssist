@@ -1,0 +1,280 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/bg_drawing_edge"
+    android:orientation="vertical"
+    android:padding="14dp">
+
+    <LinearLayout
+        android:id="@+id/drawingHeader"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fontFamily="sans-serif-black"
+                android:letterSpacing="0"
+                android:text="@string/drawing_edge_title"
+                android:textColor="@color/white"
+                android:textSize="25sp" />
+
+            <TextView
+                android:id="@+id/drawingStatus"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="3dp"
+                android:text="@string/drawing_status_default"
+                android:textColor="#CDECECF0"
+                android:textSize="12sp" />
+        </LinearLayout>
+
+        <androidx.appcompat.widget.AppCompatButton
+            android:id="@+id/btnBackHome"
+            android:layout_width="112dp"
+            android:layout_height="44dp"
+            android:background="@drawable/button_ghost"
+            android:fontFamily="sans-serif-medium"
+            android:text="@string/back_to_studio"
+            android:textAllCaps="false"
+            android:textColor="@color/white"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/drawingCanvasShell"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginTop="12dp"
+        android:layout_weight="1"
+        android:background="@drawable/drawing_canvas_shell"
+        android:padding="10dp">
+
+        <com.susnatacodes.digitaldrawingassist.DrawingCanvasView
+            android:id="@+id/drawingCanvas"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:contentDescription="@string/drawing_canvas_description" />
+    </FrameLayout>
+
+    <LinearLayout
+        android:id="@+id/toolPanel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="12dp"
+        android:background="@drawable/drawing_panel_surface"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:overScrollMode="never"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/toolPencil"
+                    style="@style/DrawingEdgeToolButton"
+                    android:text="@string/drawing_tool_pencil" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/toolBrush"
+                    style="@style/DrawingEdgeToolButton"
+                    android:text="@string/drawing_tool_brush" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/toolMarker"
+                    style="@style/DrawingEdgeToolButton"
+                    android:text="@string/drawing_tool_marker" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/toolEraser"
+                    style="@style/DrawingEdgeToolButton"
+                    android:text="@string/drawing_tool_eraser" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/toolLine"
+                    style="@style/DrawingEdgeToolButton"
+                    android:text="@string/drawing_tool_line" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/toolRect"
+                    style="@style/DrawingEdgeToolButton"
+                    android:text="@string/drawing_tool_rect" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/toolEllipse"
+                    style="@style/DrawingEdgeToolButton"
+                    android:text="@string/drawing_tool_ellipse" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="9dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <TextView
+                android:id="@+id/brushSizeLabel"
+                android:layout_width="62dp"
+                android:layout_height="wrap_content"
+                android:text="@string/drawing_brush_size_default"
+                android:textColor="#E8F7F3"
+                android:textSize="12sp" />
+
+            <SeekBar
+                android:id="@+id/brushSizeSeek"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/colorSwatches"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="7dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="9dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
+
+            <EditText
+                android:id="@+id/customColorInput"
+                android:layout_width="0dp"
+                android:layout_height="46dp"
+                android:layout_marginEnd="8dp"
+                android:layout_weight="1"
+                android:background="@drawable/drawing_input"
+                android:hint="@string/drawing_custom_color_hint"
+                android:importantForAutofill="no"
+                android:inputType="textCapCharacters|textNoSuggestions"
+                android:maxLength="7"
+                android:singleLine="true"
+                android:textColor="@color/white"
+                android:textColorHint="#99FFFFFF"
+                android:textSize="14sp" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnApplyColor"
+                android:layout_width="98dp"
+                android:layout_height="46dp"
+                android:background="@drawable/button_secondary"
+                android:text="@string/drawing_apply_color"
+                android:textAllCaps="false"
+                android:textColor="@color/dda_ink"
+                android:textSize="13sp" />
+        </LinearLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/actionPanel"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/drawing_panel_surface"
+        android:orientation="vertical"
+        android:padding="10dp">
+
+        <HorizontalScrollView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:overScrollMode="never"
+            android:scrollbars="none">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnUndo"
+                    style="@style/DrawingEdgeActionButton"
+                    android:text="@string/drawing_undo" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnRedo"
+                    style="@style/DrawingEdgeActionButton"
+                    android:text="@string/drawing_redo" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnFitCanvas"
+                    style="@style/DrawingEdgeActionButton"
+                    android:text="@string/drawing_fit" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnTemplate"
+                    style="@style/DrawingEdgeActionButton"
+                    android:text="@string/drawing_template_default" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnSmooth"
+                    style="@style/DrawingEdgeActionButton"
+                    android:text="@string/drawing_smooth_on" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnStylus"
+                    style="@style/DrawingEdgeActionButton"
+                    android:text="@string/drawing_stylus_off" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnCoach"
+                    style="@style/DrawingEdgeActionButton"
+                    android:text="@string/drawing_coach" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnClear"
+                    style="@style/DrawingEdgeActionButton"
+                    android:text="@string/drawing_clear" />
+
+                <androidx.appcompat.widget.AppCompatButton
+                    android:id="@+id/btnSaveDrawing"
+                    style="@style/DrawingEdgeActionButton"
+                    android:text="@string/drawing_save" />
+            </LinearLayout>
+        </HorizontalScrollView>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:orientation="horizontal">
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnLayerOne"
+                style="@style/DrawingEdgeLayerButton"
+                android:text="@string/drawing_layer_one" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnLayerTwo"
+                style="@style/DrawingEdgeLayerButton"
+                android:text="@string/drawing_layer_two" />
+
+            <androidx.appcompat.widget.AppCompatButton
+                android:id="@+id/btnLayerThree"
+                style="@style/DrawingEdgeLayerButton"
+                android:text="@string/drawing_layer_three" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

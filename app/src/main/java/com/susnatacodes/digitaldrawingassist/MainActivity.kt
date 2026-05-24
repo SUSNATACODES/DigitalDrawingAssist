@@ -1,6 +1,7 @@
 package com.susnatacodes.digitaldrawingassist
 
 import android.app.Activity
+import android.content.ClipData
 import android.content.Intent
 import android.net.Uri
 import android.os.Bundle
@@ -12,10 +13,12 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toUri
 
 class MainActivity : AppCompatActivity() {
 
     private var selectedImageUri: Uri? = null
+    private var pendingOverlayUri: Uri? = null
     private lateinit var previewImage: ImageView
     private lateinit var imageStatus: TextView
     private lateinit var startHint: TextView
@@ -44,9 +47,14 @@ class MainActivity : AppCompatActivity() {
             if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
 
             val uriString = result.data?.getStringExtra(EXTRA_IMAGE_URI) ?: return@registerForActivityResult
-            selectedImageUri = Uri.parse(uriString)
+            selectedImageUri = uriString.toUri()
             updateSelectedImage()
             Toast.makeText(this, getString(R.string.msg_image_ready), Toast.LENGTH_SHORT).show()
+        }
+
+    private val overlayPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            startPendingOverlayIfAllowed()
         }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -59,16 +67,19 @@ class MainActivity : AppCompatActivity() {
         btnStart = findViewById(R.id.btnStart)
 
         val btnSelect = findViewById<Button>(R.id.btnSelect)
+        val btnDrawingEdge = findViewById<Button>(R.id.btnDrawingEdge)
         val btnGuide = findViewById<Button>(R.id.btnGuide)
         val btnDeveloper = findViewById<Button>(R.id.btnDeveloper)
         val animatedViews = listOf<View>(
             findViewById(R.id.mainEyebrow),
             findViewById(R.id.mainTitle),
             findViewById(R.id.mainSubtitle),
+            findViewById(R.id.drawingEdgePanel),
             findViewById(R.id.heroPanel),
             findViewById(R.id.toolboxPanel),
             findViewById(R.id.developerSpotlight),
             findViewById(R.id.featureStrip),
+            btnDrawingEdge,
             btnSelect,
             btnStart,
             btnGuide,
@@ -76,13 +87,16 @@ class MainActivity : AppCompatActivity() {
             startHint
         )
 
-        selectedImageUri = savedInstanceState
-            ?.getString(STATE_IMAGE_URI)
-            ?.let(Uri::parse)
+        selectedImageUri = savedInstanceState?.getString(STATE_IMAGE_URI)?.toUri()
+        pendingOverlayUri = savedInstanceState?.getString(STATE_PENDING_OVERLAY_URI)?.toUri()
 
         updateSelectedImage()
-        UiEffects.applyPressAnimation(btnSelect, btnStart, btnGuide, btnDeveloper)
+        UiEffects.applyPressAnimation(btnDrawingEdge, btnSelect, btnStart, btnGuide, btnDeveloper)
         UiEffects.playStaggeredEntrance(animatedViews)
+
+        btnDrawingEdge.setOnClickListener {
+            startActivity(Intent(this, DrawingEdgeActivity::class.java))
+        }
 
         btnSelect.setOnClickListener {
             selectImageLauncher.launch(arrayOf("image/*"))
@@ -110,17 +124,13 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
-            if (!Settings.canDrawOverlays(this)) {
-                Toast.makeText(this, getString(R.string.permission_required), Toast.LENGTH_LONG).show()
-                val intent = Intent(
-                    Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-                    Uri.parse("package:$packageName")
-                )
-                startActivity(intent)
-            } else {
-                startOverlayService(uri)
-            }
+            startOverlayWhenReady(uri)
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        startPendingOverlayIfAllowed()
     }
 
     private fun updateSelectedImage() {
@@ -144,17 +154,47 @@ class MainActivity : AppCompatActivity() {
     private fun startOverlayService(uri: Uri) {
         val intent = Intent(this, OverlayService::class.java)
             .putExtra(EXTRA_IMAGE_URI, uri.toString())
+            .setData(uri)
+            .apply {
+                clipData = ClipData.newUri(contentResolver, getString(R.string.preview_title), uri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
         startService(intent)
+        pendingOverlayUri = null
         finish()
+    }
+
+    private fun startOverlayWhenReady(uri: Uri) {
+        if (Settings.canDrawOverlays(this)) {
+            startOverlayService(uri)
+            return
+        }
+
+        pendingOverlayUri = uri
+        Toast.makeText(this, getString(R.string.permission_required), Toast.LENGTH_LONG).show()
+        val intent = Intent(
+            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+            "package:$packageName".toUri()
+        )
+        overlayPermissionLauncher.launch(intent)
+    }
+
+    private fun startPendingOverlayIfAllowed() {
+        val uri = pendingOverlayUri ?: return
+        if (Settings.canDrawOverlays(this)) {
+            startOverlayService(uri)
+        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         selectedImageUri?.let { outState.putString(STATE_IMAGE_URI, it.toString()) }
+        pendingOverlayUri?.let { outState.putString(STATE_PENDING_OVERLAY_URI, it.toString()) }
     }
 
     companion object {
         const val EXTRA_IMAGE_URI = "imageUri"
         private const val STATE_IMAGE_URI = "selectedImageUri"
+        private const val STATE_PENDING_OVERLAY_URI = "pendingOverlayUri"
     }
 }

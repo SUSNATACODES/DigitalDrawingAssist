@@ -1,13 +1,13 @@
 package com.susnatacodes.digitaldrawingassist
 
 import android.content.Intent
-import android.net.Uri
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.net.toUri
 
 class PreviewActivity : AppCompatActivity() {
 
@@ -26,7 +26,7 @@ class PreviewActivity : AppCompatActivity() {
         uriString = intent.getStringExtra(MainActivity.EXTRA_IMAGE_URI)
 
         if (uriString != null) {
-            imageView.setImageURI(Uri.parse(uriString))
+            imageView.setImageURI(uriString?.toUri())
             previewStatus.text = getString(R.string.preview_ready)
             btnDone.isEnabled = true
             btnDone.alpha = 1f

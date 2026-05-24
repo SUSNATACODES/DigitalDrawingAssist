@@ -11,7 +11,8 @@
         android:layout_width="420dp"
         android:layout_height="420dp"
         android:adjustViewBounds="true"
-        android:background="@color/white"
+        android:background="@android:color/transparent"
+        android:contentDescription="@string/preview_title"
         android:padding="3dp"
         android:scaleType="fitCenter" />
 
