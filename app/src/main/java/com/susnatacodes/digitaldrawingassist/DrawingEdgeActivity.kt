@@ -11,12 +11,18 @@ import android.view.Gravity
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.graphics.toColorInt
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 import java.io.IOException
 
 class DrawingEdgeActivity : AppCompatActivity() {
@@ -41,12 +47,29 @@ class DrawingEdgeActivity : AppCompatActivity() {
         "Use a grid template for symmetry, then turn it off before exporting.",
         "Drop opacity mentally: sketch the shadow shapes, not only outlines.",
         "Use a thicker brush for foreground lines and a thin pencil for details.",
-        "Rotate the canvas with two fingers until your wrist feels natural."
+        "Rotate the canvas with two fingers until your wrist feels natural.",
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(
+                Color.TRANSPARENT,
+                Color.TRANSPARENT,
+            ),
+            navigationBarStyle = SystemBarStyle.light(
+                Color.TRANSPARENT,
+                Color.TRANSPARENT,
+            ),
+        )
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_drawing_edge)
+
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = true
+            isAppearanceLightNavigationBars = true
+        }
+
+        setupWindowInsets()
 
         canvasView = findViewById(R.id.drawingCanvas)
         statusText = findViewById(R.id.drawingStatus)
@@ -67,12 +90,12 @@ class DrawingEdgeActivity : AppCompatActivity() {
             DrawingCanvasView.Tool.ERASER to findViewById(R.id.toolEraser),
             DrawingCanvasView.Tool.LINE to findViewById(R.id.toolLine),
             DrawingCanvasView.Tool.RECTANGLE to findViewById(R.id.toolRect),
-            DrawingCanvasView.Tool.ELLIPSE to findViewById(R.id.toolEllipse)
+            DrawingCanvasView.Tool.ELLIPSE to findViewById(R.id.toolEllipse),
         )
         layerButtons = listOf(
             findViewById(R.id.btnLayerOne),
             findViewById(R.id.btnLayerTwo),
-            findViewById(R.id.btnLayerThree)
+            findViewById(R.id.btnLayerThree),
         )
 
         setupTools()
@@ -87,9 +110,18 @@ class DrawingEdgeActivity : AppCompatActivity() {
                 findViewById(R.id.drawingHeader),
                 findViewById(R.id.drawingCanvasShell),
                 findViewById(R.id.toolPanel),
-                findViewById(R.id.actionPanel)
-            )
+                findViewById(R.id.actionPanel),
+            ),
         )
+    }
+
+    private fun setupWindowInsets() {
+        val root = findViewById<View>(R.id.drawingRootLayout) ?: return
+        ViewCompat.setOnApplyWindowInsetsListener(root) { view, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            view.setPadding(14.dp(), systemBars.top + 8.dp(), 14.dp(), systemBars.bottom + 8.dp())
+            insets
+        }
     }
 
     private fun setupTools() {
@@ -104,15 +136,17 @@ class DrawingEdgeActivity : AppCompatActivity() {
     private fun setupBrushSize() {
         brushSizeSeek.max = 78
         brushSizeSeek.progress = 8
-        brushSizeSeek.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                canvasView.brushSize = progress + 2f
-                updateState()
-            }
+        brushSizeSeek.setOnSeekBarChangeListener(
+            object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    canvasView.brushSize = progress + 2f
+                    updateState()
+                }
 
-            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
-            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
-        })
+                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+            },
+        )
     }
 
     private fun setupColors() {
@@ -123,7 +157,7 @@ class DrawingEdgeActivity : AppCompatActivity() {
             0xFF20BFA9.toInt(),
             0xFF3A86FF.toInt(),
             0xFF8338EC.toInt(),
-            0xFFFFFFFF.toInt()
+            0xFFFFFFFF.toInt(),
         )
 
         colors.forEach { color ->
@@ -139,7 +173,7 @@ class DrawingEdgeActivity : AppCompatActivity() {
             }
             colorSwatches.addView(
                 swatch,
-                LinearLayout.LayoutParams(36.dp(), 36.dp()).apply { marginEnd = 8.dp() }
+                LinearLayout.LayoutParams(36.dp(), 36.dp()).apply { marginEnd = 8.dp() },
             )
         }
 
@@ -155,7 +189,8 @@ class DrawingEdgeActivity : AppCompatActivity() {
     }
 
     private fun setupActions() {
-        findViewById<Button>(R.id.btnBackHome).setOnClickListener { finish() }
+        findViewById<ImageButton>(R.id.btnBackHome)?.setOnClickListener { finish() }
+        findViewById<Button>(R.id.btnSaveDrawingHeader)?.setOnClickListener { saveDrawing() }
         btnUndo.setOnClickListener { canvasView.undo() }
         btnRedo.setOnClickListener { canvasView.redo() }
         findViewById<Button>(R.id.btnClear).setOnClickListener {
@@ -199,16 +234,16 @@ class DrawingEdgeActivity : AppCompatActivity() {
             R.string.drawing_status,
             canvasView.toolLabel(),
             canvasView.layerLabel(),
-            canvasView.templateLabel()
+            canvasView.templateLabel(),
         )
         brushSizeLabel.text = getString(R.string.drawing_brush_size_value, canvasView.brushSize.toInt())
         btnUndo.isEnabled = canvasView.canUndo()
         btnRedo.isEnabled = canvasView.canRedo()
         btnSmooth.text = getString(
-            if (canvasView.smoothMode) R.string.drawing_smooth_on else R.string.drawing_smooth_off
+            if (canvasView.smoothMode) R.string.drawing_smooth_on else R.string.drawing_smooth_off,
         )
         btnStylus.text = getString(
-            if (canvasView.stylusOnly) R.string.drawing_stylus_on else R.string.drawing_stylus_off
+            if (canvasView.stylusOnly) R.string.drawing_stylus_on else R.string.drawing_stylus_off,
         )
         btnTemplate.text = getString(R.string.drawing_template_button, canvasView.templateLabel())
 
@@ -219,7 +254,7 @@ class DrawingEdgeActivity : AppCompatActivity() {
             button.text = getString(
                 R.string.drawing_layer_button,
                 index + 1,
-                if (canvasView.isLayerVisible(index)) "" else " off"
+                if (canvasView.isLayerVisible(index)) "" else " off",
             )
             button.background = chipDrawable(active = index == canvasView.activeLayer)
         }
@@ -234,10 +269,10 @@ class DrawingEdgeActivity : AppCompatActivity() {
             0xFF20BFA9.toInt(),
             0xFF3A86FF.toInt(),
             0xFF8338EC.toInt(),
-            0xFFFFFFFF.toInt()
+            0xFFFFFFFF.toInt(),
         )
         swatchColors.forEachIndexed { index, color ->
-            colorSwatches.getChildAt(index).background = swatchDrawable(color, color == canvasView.activeColor)
+            colorSwatches.getChildAt(index)?.background = swatchDrawable(color, color == canvasView.activeColor)
         }
     }
 
@@ -296,15 +331,16 @@ class DrawingEdgeActivity : AppCompatActivity() {
 
     private fun chipDrawable(active: Boolean): GradientDrawable {
         return if (active) {
-            GradientDrawable(
-                GradientDrawable.Orientation.LEFT_RIGHT,
-                intArrayOf(0xFFFF6B6B.toInt(), 0xFF20BFA9.toInt())
-            ).apply { cornerRadius = 8f.dp() }
+            GradientDrawable().apply {
+                setColor(0xFFFFE600.toInt())
+                cornerRadius = 4f.dp()
+                setStroke(3.dp(), 0xFF000000.toInt())
+            }
         } else {
             GradientDrawable().apply {
-                setColor(0x18FFFFFF)
-                cornerRadius = 8f.dp()
-                setStroke(1.dp(), 0x22FFFFFF)
+                setColor(0xFFFFFFFF.toInt())
+                cornerRadius = 4f.dp()
+                setStroke(2.dp(), 0xFF000000.toInt())
             }
         }
     }
@@ -313,10 +349,10 @@ class DrawingEdgeActivity : AppCompatActivity() {
         return GradientDrawable().apply {
             shape = GradientDrawable.OVAL
             setColor(color)
-            setStroke(if (active) 4.dp() else 1.dp(), if (active) 0xFFFFD166.toInt() else 0x55FFFFFF)
+            setStroke(if (active) 4.dp() else 1.dp(), 0xFF000000.toInt())
         }
     }
 
-    private fun Int.dp(): Int = (this * resources.displayMetrics.density + 0.5f).toInt()
+    private fun Int.dp(): Int = ((this * resources.displayMetrics.density) + 0.5f).toInt()
     private fun Float.dp(): Float = this * resources.displayMetrics.density
 }

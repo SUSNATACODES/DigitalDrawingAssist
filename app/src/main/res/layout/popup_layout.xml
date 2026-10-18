@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/overlayRoot"
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:background="@drawable/bg_overlay_image_shell"
@@ -23,5 +24,73 @@
         android:layout_gravity="center"
         android:importantForAccessibility="no"
         android:visibility="gone" />
+
+    <!-- Resize Overlay Handles Container -->
+    <FrameLayout
+        android:id="@+id/resizeHandlesContainer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:visibility="gone">
+
+        <!-- Corner Handles -->
+        <View
+            android:id="@+id/handleTopLeft"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_gravity="top|start"
+            android:background="@drawable/bg_resize_handle" />
+
+        <View
+            android:id="@+id/handleTopRight"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_gravity="top|end"
+            android:background="@drawable/bg_resize_handle" />
+
+        <View
+            android:id="@+id/handleBottomLeft"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_gravity="bottom|start"
+            android:background="@drawable/bg_resize_handle" />
+
+        <View
+            android:id="@+id/handleBottomRight"
+            android:layout_width="16dp"
+            android:layout_height="16dp"
+            android:layout_gravity="bottom|end"
+            android:background="@drawable/bg_resize_handle" />
+
+        <!-- Side Handles -->
+        <View
+            android:id="@+id/handleRight"
+            android:layout_width="6dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center_vertical|end"
+            android:background="@drawable/bg_resize_handle_bar" />
+
+        <View
+            android:id="@+id/handleBottom"
+            android:layout_width="32dp"
+            android:layout_height="6dp"
+            android:layout_gravity="bottom|center_horizontal"
+            android:background="@drawable/bg_resize_handle_bar" />
+
+        <View
+            android:id="@+id/handleLeft"
+            android:layout_width="6dp"
+            android:layout_height="32dp"
+            android:layout_gravity="center_vertical|start"
+            android:background="@drawable/bg_resize_handle_bar" />
+
+        <View
+            android:id="@+id/handleTop"
+            android:layout_width="32dp"
+            android:layout_height="6dp"
+            android:layout_gravity="top|center_horizontal"
+            android:background="@drawable/bg_resize_handle_bar" />
+
+    </FrameLayout>
 
 </FrameLayout>

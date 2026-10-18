@@ -1,5 +1,9 @@
 <resources>
     <string name="app_name">Digital Drawing Assist</string>
+    <string name="nav_studio">Studio</string>
+    <string name="nav_canvas">Canvas</string>
+    <string name="nav_guide">Guide</string>
+    <string name="nav_developer">Developer</string>
     <string name="main_eyebrow">Trace-ready overlay studio</string>
     <string name="main_subtitle">Pick a reference, preview it, then float it above any drawing app with fast controls for tracing and sketching.</string>
     <string name="select_image">Choose Reference</string>
@@ -41,6 +45,8 @@
     <string name="cp_drag_sub">Drag the reference around the screen</string>
     <string name="cp_zoom">Pinch Zoom</string>
     <string name="cp_zoom_sub">Resize with two fingers</string>
+    <string name="cp_resize">Resizer</string>
+    <string name="cp_resize_sub">Resize frame by dragging corners or sides</string>
     <string name="cp_mirror">Mirror</string>
     <string name="cp_toggle_on">ON</string>
     <string name="cp_toggle_off">OFF</string>

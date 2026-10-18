@@ -1,8 +1,8 @@
 package com.susnatacodes.digitaldrawingassist
 
-import android.app.Activity
 import android.content.ClipData
 import android.content.Intent
+import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
@@ -11,9 +11,18 @@ import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityOptionsCompat
 import androidx.core.net.toUri
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.widget.NestedScrollView
+import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.bottomnavigation.BottomNavigationView
 
 class MainActivity : AppCompatActivity() {
 
@@ -21,8 +30,9 @@ class MainActivity : AppCompatActivity() {
     private var pendingOverlayUri: Uri? = null
     private lateinit var previewImage: ImageView
     private lateinit var imageStatus: TextView
-    private lateinit var startHint: TextView
     private lateinit var btnStart: Button
+    private lateinit var bottomNavigationView: BottomNavigationView
+    private lateinit var mainScrollView: NestedScrollView
 
     private val selectImageLauncher =
         registerForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -31,10 +41,10 @@ class MainActivity : AppCompatActivity() {
             try {
                 contentResolver.takePersistableUriPermission(
                     uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION
+                    Intent.FLAG_GRANT_READ_URI_PERMISSION,
                 )
             } catch (_: SecurityException) {
-                // Some document providers grant temporary access only.
+                // Document provider granted temporary access only.
             }
 
             val intent = Intent(this, PreviewActivity::class.java)
@@ -44,7 +54,7 @@ class MainActivity : AppCompatActivity() {
 
     private val previewLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode != Activity.RESULT_OK) return@registerForActivityResult
+            if (result.resultCode != RESULT_OK) return@registerForActivityResult
 
             val uriString = result.data?.getStringExtra(EXTRA_IMAGE_URI) ?: return@registerForActivityResult
             selectedImageUri = uriString.toUri()
@@ -52,85 +62,139 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, getString(R.string.msg_image_ready), Toast.LENGTH_SHORT).show()
         }
 
-    private val overlayPermissionLauncher =
-        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            startPendingOverlayIfAllowed()
-        }
-
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(
+                Color.TRANSPARENT,
+                Color.TRANSPARENT,
+            ),
+            navigationBarStyle = SystemBarStyle.light(
+                Color.TRANSPARENT,
+                Color.TRANSPARENT,
+            ),
+        )
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = true
+            isAppearanceLightNavigationBars = true
+        }
+
+        setupWindowInsets()
+
         previewImage = findViewById(R.id.selectedPreview)
         imageStatus = findViewById(R.id.imageStatus)
-        startHint = findViewById(R.id.startHint)
         btnStart = findViewById(R.id.btnStart)
+        bottomNavigationView = findViewById(R.id.bottomNavigationView)
+        mainScrollView = findViewById(R.id.mainScrollView)
 
         val btnSelect = findViewById<Button>(R.id.btnSelect)
-        val btnDrawingEdge = findViewById<Button>(R.id.btnDrawingEdge)
-        val btnGuide = findViewById<Button>(R.id.btnGuide)
-        val btnDeveloper = findViewById<Button>(R.id.btnDeveloper)
+
         val animatedViews = listOf<View>(
             findViewById(R.id.mainEyebrow),
             findViewById(R.id.mainTitle),
             findViewById(R.id.mainSubtitle),
-            findViewById(R.id.drawingEdgePanel),
             findViewById(R.id.heroPanel),
-            findViewById(R.id.toolboxPanel),
-            findViewById(R.id.developerSpotlight),
-            findViewById(R.id.featureStrip),
-            btnDrawingEdge,
             btnSelect,
             btnStart,
-            btnGuide,
-            btnDeveloper,
-            startHint
         )
 
         selectedImageUri = savedInstanceState?.getString(STATE_IMAGE_URI)?.toUri()
         pendingOverlayUri = savedInstanceState?.getString(STATE_PENDING_OVERLAY_URI)?.toUri()
 
         updateSelectedImage()
-        UiEffects.applyPressAnimation(btnDrawingEdge, btnSelect, btnStart, btnGuide, btnDeveloper)
+        UiEffects.applyPressAnimation(btnSelect, btnStart)
         UiEffects.playStaggeredEntrance(animatedViews)
+        UiEffects.playPulseAnimation(btnStart)
 
-        btnDrawingEdge.setOnClickListener {
-            startActivity(Intent(this, DrawingEdgeActivity::class.java))
-        }
+        setupBottomNavigation()
 
         btnSelect.setOnClickListener {
             selectImageLauncher.launch(arrayOf("image/*"))
-        }
-
-        btnGuide.setOnClickListener {
-            startActivity(Intent(this, CreativeGuideActivity::class.java))
-        }
-
-        btnDeveloper.setOnClickListener {
-            startActivity(Intent(this, DeveloperInfoActivity::class.java))
         }
 
         btnStart.setOnClickListener {
             val uri = selectedImageUri
             if (uri == null) {
                 Toast.makeText(this, getString(R.string.msg_select_first), Toast.LENGTH_SHORT).show()
-                previewImage.animate()
-                    .rotationBy(1.8f)
-                    .setDuration(70)
-                    .withEndAction {
-                        previewImage.animate().rotation(0f).setDuration(90).start()
-                    }
-                    .start()
+                UiEffects.playShakeAnimation(previewImage)
                 return@setOnClickListener
             }
 
-            startOverlayWhenReady(uri)
+            if (!Settings.canDrawOverlays(this)) {
+                val intent = Intent(this, PermissionActivity::class.java)
+                startActivity(intent)
+                return@setOnClickListener
+            }
+
+            startOverlayService(uri)
+        }
+    }
+
+    private fun navigateTo(activityClass: Class<*>) {
+        val intent = Intent(this, activityClass).apply {
+            addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_REORDER_TO_FRONT)
+        }
+        val options = ActivityOptionsCompat.makeCustomAnimation(
+            this,
+            android.R.anim.fade_in,
+            android.R.anim.fade_out,
+        )
+        startActivity(intent, options.toBundle())
+    }
+
+    private fun setupWindowInsets() {
+        val root = findViewById<View>(R.id.mainRootLayout) ?: return
+        val appBar = findViewById<AppBarLayout>(R.id.mainAppBarLayout)
+        val bottomNav = findViewById<BottomNavigationView>(R.id.bottomNavigationView)
+
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            appBar?.setPadding(0, systemBars.top, 0, 0)
+            bottomNav?.setPadding(0, 0, 0, systemBars.bottom)
+            insets
+        }
+    }
+
+    private fun setupBottomNavigation() {
+        bottomNavigationView.selectedItemId = R.id.nav_studio
+        bottomNavigationView.setOnItemSelectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_studio -> {
+                    mainScrollView.smoothScrollTo(0, 0)
+                    true
+                }
+                R.id.nav_canvas -> {
+                    navigateTo(DrawingEdgeActivity::class.java)
+                    true
+                }
+                R.id.nav_guide -> {
+                    navigateTo(CreativeGuideActivity::class.java)
+                    true
+                }
+                R.id.nav_developer -> {
+                    navigateTo(DeveloperInfoActivity::class.java)
+                    true
+                }
+                else -> false
+            }
+        }
+        bottomNavigationView.setOnItemReselectedListener { item ->
+            when (item.itemId) {
+                R.id.nav_studio -> mainScrollView.smoothScrollTo(0, 0)
+                R.id.nav_canvas -> navigateTo(DrawingEdgeActivity::class.java)
+                R.id.nav_guide -> navigateTo(CreativeGuideActivity::class.java)
+                R.id.nav_developer -> navigateTo(DeveloperInfoActivity::class.java)
+            }
         }
     }
 
     override fun onResume() {
         super.onResume()
-        startPendingOverlayIfAllowed()
+        if (::bottomNavigationView.isInitialized) {
+            bottomNavigationView.selectedItemId = R.id.nav_studio
+        }
     }
 
     private fun updateSelectedImage() {
@@ -139,7 +203,6 @@ class MainActivity : AppCompatActivity() {
             previewImage.setImageResource(android.R.drawable.ic_menu_gallery)
             previewImage.alpha = 0.44f
             imageStatus.text = getString(R.string.reference_empty)
-            startHint.text = getString(R.string.start_hint_empty)
             btnStart.alpha = 0.76f
             return
         }
@@ -147,7 +210,6 @@ class MainActivity : AppCompatActivity() {
         previewImage.alpha = 1f
         previewImage.setImageURI(uri)
         imageStatus.text = getString(R.string.reference_ready)
-        startHint.text = getString(R.string.start_hint_ready)
         btnStart.alpha = 1f
     }
 
@@ -162,28 +224,6 @@ class MainActivity : AppCompatActivity() {
         startService(intent)
         pendingOverlayUri = null
         finish()
-    }
-
-    private fun startOverlayWhenReady(uri: Uri) {
-        if (Settings.canDrawOverlays(this)) {
-            startOverlayService(uri)
-            return
-        }
-
-        pendingOverlayUri = uri
-        Toast.makeText(this, getString(R.string.permission_required), Toast.LENGTH_LONG).show()
-        val intent = Intent(
-            Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
-            "package:$packageName".toUri()
-        )
-        overlayPermissionLauncher.launch(intent)
-    }
-
-    private fun startPendingOverlayIfAllowed() {
-        val uri = pendingOverlayUri ?: return
-        if (Settings.canDrawOverlays(this)) {
-            startOverlayService(uri)
-        }
     }
 
     override fun onSaveInstanceState(outState: Bundle) {

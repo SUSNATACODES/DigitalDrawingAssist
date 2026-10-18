@@ -1,21 +1,49 @@
 package com.susnatacodes.digitaldrawingassist
 
 import android.content.Intent
+import android.graphics.Color
 import android.os.Bundle
 import android.view.View
 import android.widget.Button
 import android.widget.ImageView
 import android.widget.TextView
+import androidx.activity.SystemBarStyle
+import androidx.activity.enableEdgeToEdge
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.net.toUri
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import com.google.android.material.appbar.AppBarLayout
+import com.google.android.material.appbar.MaterialToolbar
 
 class PreviewActivity : AppCompatActivity() {
 
     private var uriString: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.light(
+                Color.TRANSPARENT,
+                Color.TRANSPARENT,
+            ),
+            navigationBarStyle = SystemBarStyle.light(
+                Color.TRANSPARENT,
+                Color.TRANSPARENT,
+            ),
+        )
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_preview)
+
+        WindowCompat.getInsetsController(window, window.decorView).apply {
+            isAppearanceLightStatusBars = true
+            isAppearanceLightNavigationBars = true
+        }
+
+        setupWindowInsets()
+
+        val toolbar = findViewById<MaterialToolbar>(R.id.previewToolbar)
+        toolbar.setNavigationOnClickListener { finish() }
 
         val imageView = findViewById<ImageView>(R.id.previewImage)
         val previewStage = findViewById<View>(R.id.previewStage)
@@ -40,7 +68,7 @@ class PreviewActivity : AppCompatActivity() {
         UiEffects.playStaggeredEntrance(
             listOf(previewStage, previewStatus, btnCancel, btnDone),
             distance = 22f,
-            delayStep = 70L
+            delayStep = 70L,
         )
 
         btnDone.setOnClickListener {
@@ -52,6 +80,18 @@ class PreviewActivity : AppCompatActivity() {
         btnCancel.setOnClickListener {
             setResult(RESULT_CANCELED)
             finish()
+        }
+    }
+
+    private fun setupWindowInsets() {
+        val root = findViewById<View>(R.id.previewRootLayout) ?: return
+        val appBar = findViewById<AppBarLayout>(R.id.previewAppBarLayout)
+        val content = findViewById<View>(R.id.previewContentContainer)
+        ViewCompat.setOnApplyWindowInsetsListener(root) { _, insets ->
+            val systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+            appBar?.setPadding(0, systemBars.top, 0, 0)
+            content?.setPadding(0, 0, 0, systemBars.bottom)
+            insets
         }
     }
 }

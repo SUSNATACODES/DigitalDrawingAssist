@@ -1,11 +1,10 @@
-<resources>
-    <style name="Base.Theme.DigitalDrawingAssist" parent="Theme.Material3.DayNight.NoActionBar">
-        <item name="colorPrimary">@color/dda_primary</item>
-        <item name="colorSecondary">@color/dda_teal</item>
-        <item name="colorTertiary">@color/dda_sun</item>
-        <item name="android:fontFamily">sans</item>
-        <item name="android:navigationBarColor">#17181F</item>
-        <item name="android:statusBarColor">#17181F</item>
-        <item name="android:windowLightStatusBar">false</item>
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <style name="Base.Theme.DigitalDrawingAssist" parent="Theme.Material3.Light.NoActionBar">
+        <!-- System Bars Edge-to-Edge: Force BLACK status bar icons (battery, time, wifi) -->
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar" tools:targetApi="27">true</item>
     </style>
 </resources>

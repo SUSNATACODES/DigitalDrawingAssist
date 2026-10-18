@@ -1,11 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/drawingRootLayout"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@drawable/bg_drawing_edge"
+    android:background="@color/brutal_cream"
     android:orientation="vertical"
-    android:padding="14dp">
+    android:padding="14dp"
+    tools:context=".DrawingEdgeActivity">
 
+    <!-- Top App Header -->
     <LinearLayout
         android:id="@+id/drawingHeader"
         android:layout_width="match_parent"
@@ -13,51 +18,70 @@
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
+        <ImageButton
+            android:id="@+id/btnBackHome"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="@string/back_to_studio"
+            android:src="@drawable/ic_arrow_back"
+            app:tint="@color/black" />
+
         <LinearLayout
             android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="8dp"
             android:layout_weight="1"
             android:orientation="vertical">
 
             <TextView
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:fontFamily="sans-serif-black"
+                android:fontFamily="sans-serif"
+                android:textFontWeight="900"
+                android:textStyle="bold"
+                tools:targetApi="28"
                 android:letterSpacing="0"
                 android:text="@string/drawing_edge_title"
-                android:textColor="@color/white"
-                android:textSize="25sp" />
+                android:textColor="@color/black"
+                android:textSize="22sp" />
 
             <TextView
                 android:id="@+id/drawingStatus"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="3dp"
+                android:layout_marginTop="2dp"
                 android:text="@string/drawing_status_default"
-                android:textColor="#CDECECF0"
+                android:textColor="@color/black"
                 android:textSize="12sp" />
         </LinearLayout>
 
         <androidx.appcompat.widget.AppCompatButton
-            android:id="@+id/btnBackHome"
-            android:layout_width="112dp"
-            android:layout_height="44dp"
-            android:background="@drawable/button_ghost"
-            android:fontFamily="sans-serif-medium"
-            android:text="@string/back_to_studio"
-            android:textAllCaps="false"
-            android:textColor="@color/white"
+            android:id="@+id/btnSaveDrawingHeader"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:background="@drawable/brutal_button_pink"
+            android:fontFamily="sans-serif"
+            android:textFontWeight="900"
+            android:textStyle="bold"
+            tools:targetApi="28"
+            android:paddingStart="12dp"
+            android:paddingEnd="12dp"
+            android:text="@string/drawing_save"
+            android:textAllCaps="true"
+            android:textColor="@color/black"
             android:textSize="12sp" />
     </LinearLayout>
 
+    <!-- Canvas Container -->
     <FrameLayout
         android:id="@+id/drawingCanvasShell"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_marginTop="12dp"
+        android:layout_marginTop="10dp"
         android:layout_weight="1"
-        android:background="@drawable/drawing_canvas_shell"
-        android:padding="10dp">
+        android:background="@drawable/brutal_card"
+        android:padding="8dp">
 
         <com.susnatacodes.digitaldrawingassist.DrawingCanvasView
             android:id="@+id/drawingCanvas"
@@ -66,14 +90,15 @@
             android:contentDescription="@string/drawing_canvas_description" />
     </FrameLayout>
 
+    <!-- Tools Shelf -->
     <LinearLayout
         android:id="@+id/toolPanel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="12dp"
-        android:background="@drawable/drawing_panel_surface"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/brutal_card"
         android:orientation="vertical"
-        android:padding="10dp">
+        android:padding="14dp">
 
         <HorizontalScrollView
             android:layout_width="match_parent"
@@ -126,37 +151,41 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="9dp"
+            android:layout_marginTop="12dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
             <TextView
                 android:id="@+id/brushSizeLabel"
-                android:layout_width="62dp"
+                android:layout_width="60dp"
                 android:layout_height="wrap_content"
+                android:fontFamily="sans-serif"
+                android:textStyle="bold"
                 android:text="@string/drawing_brush_size_default"
-                android:textColor="#E8F7F3"
+                android:textColor="@color/black"
                 android:textSize="12sp" />
 
             <SeekBar
                 android:id="@+id/brushSizeSeek"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_weight="1" />
+                android:layout_weight="1"
+                android:progressTint="@color/black"
+                android:thumbTint="@color/black" />
         </LinearLayout>
 
         <LinearLayout
             android:id="@+id/colorSwatches"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="7dp"
+            android:layout_marginTop="8dp"
             android:gravity="center_vertical"
             android:orientation="horizontal" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="9dp"
+            android:layout_marginTop="12dp"
             android:gravity="center_vertical"
             android:orientation="horizontal">
 
@@ -166,36 +195,43 @@
                 android:layout_height="46dp"
                 android:layout_marginEnd="8dp"
                 android:layout_weight="1"
-                android:background="@drawable/drawing_input"
+                android:background="@drawable/brutal_input"
                 android:hint="@string/drawing_custom_color_hint"
+                android:paddingStart="12dp"
+                android:paddingEnd="12dp"
                 android:importantForAutofill="no"
                 android:inputType="textCapCharacters|textNoSuggestions"
                 android:maxLength="7"
                 android:singleLine="true"
-                android:textColor="@color/white"
-                android:textColorHint="#99FFFFFF"
+                android:textColor="@color/black"
+                android:textColorHint="@color/dda_muted"
                 android:textSize="14sp" />
 
             <androidx.appcompat.widget.AppCompatButton
                 android:id="@+id/btnApplyColor"
-                android:layout_width="98dp"
+                android:layout_width="90dp"
                 android:layout_height="46dp"
-                android:background="@drawable/button_secondary"
+                android:background="@drawable/brutal_button_yellow"
+                android:fontFamily="sans-serif"
+                android:textFontWeight="900"
+                android:textStyle="bold"
+                tools:targetApi="28"
                 android:text="@string/drawing_apply_color"
-                android:textAllCaps="false"
-                android:textColor="@color/dda_ink"
-                android:textSize="13sp" />
+                android:textAllCaps="true"
+                android:textColor="@color/black"
+                android:textSize="14sp" />
         </LinearLayout>
     </LinearLayout>
 
+    <!-- Action & Layers Shelf -->
     <LinearLayout
         android:id="@+id/actionPanel"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
-        android:background="@drawable/drawing_panel_surface"
+        android:background="@drawable/brutal_card"
         android:orientation="vertical"
-        android:padding="10dp">
+        android:padding="14dp">
 
         <HorizontalScrollView
             android:layout_width="match_parent"
@@ -258,7 +294,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="8dp"
+            android:layout_marginTop="12dp"
             android:orientation="horizontal">
 
             <androidx.appcompat.widget.AppCompatButton

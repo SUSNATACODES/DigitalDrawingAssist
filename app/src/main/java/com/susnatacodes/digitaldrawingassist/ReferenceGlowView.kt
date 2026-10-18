@@ -13,14 +13,14 @@ import android.view.View
 class ReferenceGlowView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0
+    defStyleAttr: Int = 0,
 ) : View(context, attrs, defStyleAttr) {
 
     private val bandPaint = Paint(Paint.ANTI_ALIAS_FLAG)
     private val shaderMatrix = Matrix()
     private val borderPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.argb(100, 255, 255, 255)
-        strokeWidth = 1.4f.dp()
+        color = Color.BLACK
+        strokeWidth = 3f.dp()
         style = Paint.Style.STROKE
     }
 
@@ -37,11 +37,11 @@ class ReferenceGlowView @JvmOverloads constructor(
             bandHeight,
             intArrayOf(
                 Color.TRANSPARENT,
-                Color.argb(54, 255, 255, 255),
-                Color.TRANSPARENT
+                Color.argb(80, 255, 230, 0),
+                Color.TRANSPARENT,
             ),
             floatArrayOf(0f, 0.5f, 1f),
-            Shader.TileMode.CLAMP
+            Shader.TileMode.CLAMP,
         )
     }
 

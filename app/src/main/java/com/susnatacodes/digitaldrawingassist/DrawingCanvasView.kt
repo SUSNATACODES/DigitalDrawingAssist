@@ -1,5 +1,6 @@
 package com.susnatacodes.digitaldrawingassist
 
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
@@ -11,6 +12,7 @@ import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
+import android.view.animation.OvershootInterpolator
 import androidx.core.graphics.createBitmap
 import androidx.core.graphics.withMatrix
 import kotlin.math.atan2
@@ -21,7 +23,7 @@ import kotlin.math.min
 class DrawingCanvasView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0
+    defStyleAttr: Int = 0,
 ) : View(context, attrs, defStyleAttr) {
 
     enum class Tool {
@@ -46,7 +48,7 @@ class DrawingCanvasView @JvmOverloads constructor(
         data class Stroke(
             val path: Path,
             val paint: Paint,
-            override val layer: Int
+            override val layer: Int,
         ) : DrawingElement(layer)
 
         data class Shape(
@@ -56,7 +58,7 @@ class DrawingCanvasView @JvmOverloads constructor(
             val endX: Float,
             val endY: Float,
             val paint: Paint,
-            override val layer: Int
+            override val layer: Int,
         ) : DrawingElement(layer)
     }
 
@@ -132,7 +134,6 @@ class DrawingCanvasView @JvmOverloads constructor(
     private var lastTransformCenterY = 0f
 
     init {
-        setLayerType(LAYER_TYPE_SOFTWARE, null)
         isFocusable = true
     }
 
@@ -162,12 +163,12 @@ class DrawingCanvasView @JvmOverloads constructor(
             return true
         }
 
-        if (transformActive && event.actionMasked == MotionEvent.ACTION_UP) {
+        if (transformActive && (event.actionMasked == MotionEvent.ACTION_UP)) {
             transformActive = false
             return true
         }
 
-        if (stylusOnly && event.getToolType(0) != MotionEvent.TOOL_TYPE_STYLUS) {
+        if (stylusOnly && (event.getToolType(0) != MotionEvent.TOOL_TYPE_STYLUS)) {
             return true
         }
 
@@ -240,7 +241,7 @@ class DrawingCanvasView @JvmOverloads constructor(
     }
 
     fun toggleLayerVisibility(layer: Int) {
-        if (layer !in 0 until LAYER_COUNT) return
+        if (layer !in (0 until LAYER_COUNT)) return
         layerVisible[layer] = !layerVisible[layer]
         invalidate()
         onStateChanged?.invoke()
@@ -249,14 +250,29 @@ class DrawingCanvasView @JvmOverloads constructor(
     fun isLayerVisible(layer: Int): Boolean = layerVisible.getOrNull(layer) ?: false
 
     fun fitCanvas() {
-        if (width == 0 || height == 0) return
+        if ((width == 0) || (height == 0)) return
         val horizontalScale = width / (PAPER_WIDTH * 1.15f)
         val verticalScale = height / (PAPER_HEIGHT * 1.12f)
-        canvasScale = min(horizontalScale, verticalScale).coerceIn(0.18f, 2.6f)
-        canvasRotation = 0f
-        canvasOffsetX = 0f
-        canvasOffsetY = 0f
-        invalidate()
+        val targetScale = min(horizontalScale, verticalScale).coerceIn(0.18f, 2.6f)
+
+        val startScale = canvasScale
+        val startRotation = canvasRotation
+        val startOffsetX = canvasOffsetX
+        val startOffsetY = canvasOffsetY
+
+        val animator = ValueAnimator.ofFloat(0f, 1f).apply {
+            duration = 340L
+            interpolator = OvershootInterpolator(1.1f)
+            addUpdateListener { anim ->
+                val fraction = anim.animatedValue as Float
+                canvasScale = startScale + ((targetScale - startScale) * fraction)
+                canvasRotation = startRotation + ((0f - startRotation) * fraction)
+                canvasOffsetX = startOffsetX + ((0f - startOffsetX) * fraction)
+                canvasOffsetY = startOffsetY + ((0f - startOffsetY) * fraction)
+                invalidate()
+            }
+        }
+        animator.start()
         onStateChanged?.invoke()
     }
 
@@ -349,8 +365,8 @@ class DrawingCanvasView @JvmOverloads constructor(
                     shapeEndX,
                     shapeEndY,
                     Paint(paint),
-                    activeLayer
-                )
+                    activeLayer,
+                ),
             )
         }
 
@@ -394,7 +410,7 @@ class DrawingCanvasView @JvmOverloads constructor(
                     return
                 }
 
-                if (lastTransformDistance > 0f && distance > 0f) {
+                if ((lastTransformDistance > 0f) && (distance > 0f)) {
                     canvasScale = (canvasScale * (distance / lastTransformDistance)).coerceIn(0.16f, 4f)
                 }
                 canvasRotation += angle - lastTransformAngle
@@ -420,7 +436,7 @@ class DrawingCanvasView @JvmOverloads constructor(
         contentMatrix.postTranslate(-PAPER_WIDTH / 2f, -PAPER_HEIGHT / 2f)
         contentMatrix.postScale(canvasScale, canvasScale)
         contentMatrix.postRotate(canvasRotation)
-        contentMatrix.postTranslate(width / 2f + canvasOffsetX, height / 2f + canvasOffsetY)
+        contentMatrix.postTranslate((width / 2f) + canvasOffsetX, (height / 2f) + canvasOffsetY)
         contentMatrix.invert(inverseMatrix)
     }
 
@@ -558,8 +574,8 @@ class DrawingCanvasView @JvmOverloads constructor(
         return Math.toDegrees(
             atan2(
                 event.getY(1) - event.getY(0),
-                event.getX(1) - event.getX(0)
-            ).toDouble()
+                event.getX(1) - event.getX(0),
+            ).toDouble(),
         ).toFloat()
     }
 
@@ -568,7 +584,7 @@ class DrawingCanvasView @JvmOverloads constructor(
     }
 
     private fun Tool.isFreehand(): Boolean {
-        return this == Tool.PENCIL || this == Tool.BRUSH || this == Tool.MARKER || this == Tool.ERASER
+        return (this == Tool.PENCIL) || (this == Tool.BRUSH) || (this == Tool.MARKER) || (this == Tool.ERASER)
     }
 
     private fun Int.withAlpha(alpha: Int): Int {

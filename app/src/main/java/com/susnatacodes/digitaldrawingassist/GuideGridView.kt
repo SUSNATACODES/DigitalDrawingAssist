@@ -10,7 +10,7 @@ import android.view.View
 class GuideGridView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0
+    defStyleAttr: Int = 0,
 ) : View(context, attrs, defStyleAttr) {
 
     private val shadowPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -50,12 +50,12 @@ class GuideGridView @JvmOverloads constructor(
         val h = height.toFloat()
 
         for (i in 1 until divisions) {
-            val x = w * i / divisions
+            val x = (w * i) / divisions
             drawLine(canvas, x, 0f, x, h)
         }
 
         for (i in 1 until divisions) {
-            val y = h * i / divisions
+            val y = (h * i) / divisions
             drawLine(canvas, 0f, y, w, y)
         }
     }

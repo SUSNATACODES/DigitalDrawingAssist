@@ -2,6 +2,7 @@ package com.susnatacodes.digitaldrawingassist
 
 import android.annotation.SuppressLint
 import android.app.Service
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
@@ -26,6 +27,7 @@ import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.drawable.toDrawable
 import androidx.core.net.toUri
 import kotlin.math.abs
@@ -46,6 +48,7 @@ class OverlayService : Service() {
     private var panelView: View? = null
     private var dragEnabled = false
     private var zoomEnabled = false
+    private var resizeEnabled = false
     private var mirrorX = false
     private var grayscaleEnabled = false
     private var contrastEnabled = false
@@ -56,6 +59,19 @@ class OverlayService : Service() {
     private var contentBackgroundOpacity = 0
     private var scaleFactor = 1f
     private var rotationAngle = 0f
+
+    companion object {
+        private const val RESIZE_NONE = 0
+        private const val RESIZE_RIGHT = 1
+        private const val RESIZE_BOTTOM = 2
+        private const val RESIZE_LEFT = 3
+        private const val RESIZE_TOP = 4
+        private const val RESIZE_TOP_LEFT = 5
+        private const val RESIZE_TOP_RIGHT = 6
+        private const val RESIZE_BOTTOM_LEFT = 7
+        private const val RESIZE_BOTTOM_RIGHT = 8
+        private const val RESIZE_ANY = 9
+    }
 
     private data class PanelButtonSpec(
         val text: String,
@@ -76,7 +92,7 @@ class OverlayService : Service() {
 
     private var peekSnapshot: VisualSnapshot? = null
 
-    override fun onBind(intent: android.content.Intent?): IBinder? = null
+    override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -138,7 +154,7 @@ class OverlayService : Service() {
         playEntrance()
     }
 
-    override fun onStartCommand(intent: android.content.Intent?, flags: Int, startId: Int): Int {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val uriString = intent?.getStringExtra(MainActivity.EXTRA_IMAGE_URI)
         if (uriString != null) {
             try {
@@ -183,12 +199,27 @@ class OverlayService : Service() {
         val stageSize = min(420.dp(), min(maxByWidth, maxByHeight))
             .coerceAtLeast(240.dp())
 
-        imageView.layoutParams = FrameLayout.LayoutParams(stageSize, stageSize, Gravity.CENTER)
-        guideGrid.layoutParams = FrameLayout.LayoutParams(stageSize, stageSize, Gravity.CENTER)
+        val imgParams = imageView.layoutParams as FrameLayout.LayoutParams
+        imgParams.width = stageSize
+        imgParams.height = stageSize
+        imgParams.gravity = Gravity.CENTER
+        imageView.layoutParams = imgParams
+
+        val gridParams = guideGrid.layoutParams as FrameLayout.LayoutParams
+        gridParams.width = stageSize
+        gridParams.height = stageSize
+        gridParams.gravity = Gravity.CENTER
+        guideGrid.layoutParams = gridParams
+    }
+
+    private fun updateResizeHandlesVisibility() {
+        if (!::imageLayout.isInitialized) return
+        val container = imageLayout.findViewById<View>(R.id.resizeHandlesContainer)
+        container?.visibility = if (resizeEnabled) View.VISIBLE else View.GONE
     }
 
     private fun updateImageTouchability() {
-        val isInteractive = dragEnabled || zoomEnabled
+        val isInteractive = dragEnabled || zoomEnabled || resizeEnabled
         imageParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
             WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS
 
@@ -199,15 +230,26 @@ class OverlayService : Service() {
         if (::imageLayout.isInitialized) {
             windowManager.updateViewLayout(imageLayout, imageParams)
         }
+        updateResizeHandlesVisibility()
     }
 
     @SuppressLint("ClickableViewAccessibility")
     private fun setupControlButton() {
         controlBtn.setOnClickListener {
             controlBtn.animate()
-                .rotationBy(18f)
+                .scaleX(1.18f)
+                .scaleY(1.18f)
+                .rotationBy(25f)
                 .setDuration(120)
-                .withEndAction { controlBtn.animate().rotation(0f).setDuration(120).start() }
+                .withEndAction {
+                    controlBtn.animate()
+                        .scaleX(1f)
+                        .scaleY(1f)
+                        .rotation(0f)
+                        .setDuration(160)
+                        .setInterpolator(OvershootInterpolator(1.4f))
+                        .start()
+                }
                 .start()
             showControlPanel()
         }
@@ -227,24 +269,31 @@ class OverlayService : Service() {
                         touchX = event.rawX
                         touchY = event.rawY
                         isMoving = false
-                        v.animate().scaleX(0.94f).scaleY(0.94f).setDuration(90).start()
+                        v.animate().scaleX(0.92f).scaleY(0.92f).setDuration(80).start()
                         return true
                     }
 
                     MotionEvent.ACTION_MOVE -> {
                         val dx = (event.rawX - touchX).toInt()
                         val dy = (event.rawY - touchY).toInt()
-                        if (abs(dx) > 10 || abs(dy) > 10) isMoving = true
+                        if (abs(dx) > 12 || abs(dy) > 12) {
+                            isMoving = true
+                        }
 
-                        btnParams.x = initialX + dx
-                        btnParams.y = initialY + dy
-                        windowManager.updateViewLayout(controlBtn, btnParams)
+                        if (isMoving) {
+                            btnParams.x = initialX + dx
+                            btnParams.y = initialY + dy
+                            windowManager.updateViewLayout(controlBtn, btnParams)
+                        }
                         return true
                     }
 
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                         v.animate().scaleX(1f).scaleY(1f).setDuration(120).start()
-                        if (!isMoving && event.actionMasked == MotionEvent.ACTION_UP) v.performClick()
+
+                        if (!isMoving && event.actionMasked == MotionEvent.ACTION_UP) {
+                            v.performClick()
+                        }
                         return true
                     }
                 }
@@ -261,25 +310,137 @@ class OverlayService : Service() {
             private var touchX = 0f
             private var touchY = 0f
 
+            private var startRawX = 0f
+            private var startRawY = 0f
+            private var initialWidth = 0
+            private var initialHeight = 0
+            private var resizeMode = RESIZE_NONE
+
             override fun onTouch(v: View, event: MotionEvent): Boolean {
-                if (!(dragEnabled || zoomEnabled)) return false
+                if (!(dragEnabled || zoomEnabled || resizeEnabled)) return false
 
                 if (zoomEnabled) scaleGestureDetector.onTouchEvent(event)
 
-                if (dragEnabled && event.pointerCount == 1) {
+                if (event.pointerCount == 1) {
                     when (event.actionMasked) {
                         MotionEvent.ACTION_DOWN -> {
                             initialX = imageParams.x
                             initialY = imageParams.y
                             touchX = event.rawX
                             touchY = event.rawY
+                            startRawX = event.rawX
+                            startRawY = event.rawY
+
+                            initialWidth = imageView.width.takeIf { it > 0 } ?: 420.dp()
+                            initialHeight = imageView.height.takeIf { it > 0 } ?: 420.dp()
+
+                            if (resizeEnabled) {
+                                val localX = event.x
+                                val localY = event.y
+                                val w = v.width.toFloat()
+                                val h = v.height.toFloat()
+                                val edgeThreshold = 48.dp().toFloat()
+
+                                val isLeft = localX < edgeThreshold
+                                val isRight = localX > w - edgeThreshold
+                                val isTop = localY < edgeThreshold
+                                val isBottom = localY > h - edgeThreshold
+
+                                resizeMode = when {
+                                    isTop && isLeft -> RESIZE_TOP_LEFT
+                                    isTop && isRight -> RESIZE_TOP_RIGHT
+                                    isBottom && isLeft -> RESIZE_BOTTOM_LEFT
+                                    isBottom && isRight -> RESIZE_BOTTOM_RIGHT
+                                    isLeft -> RESIZE_LEFT
+                                    isRight -> RESIZE_RIGHT
+                                    isTop -> RESIZE_TOP
+                                    isBottom -> RESIZE_BOTTOM
+                                    else -> RESIZE_ANY
+                                }
+                            } else {
+                                resizeMode = RESIZE_NONE
+                            }
                             return true
                         }
 
                         MotionEvent.ACTION_MOVE -> {
-                            imageParams.x = initialX + (event.rawX - touchX).toInt()
-                            imageParams.y = initialY + (event.rawY - touchY).toInt()
-                            windowManager.updateViewLayout(imageLayout, imageParams)
+                            val dx = (event.rawX - startRawX).toInt()
+                            val dy = (event.rawY - startRawY).toInt()
+
+                            if (resizeEnabled && resizeMode != RESIZE_NONE) {
+                                val minSize = 120.dp()
+                                val metrics = resources.displayMetrics
+                                val maxWidth = metrics.widthPixels - 20.dp()
+                                val maxHeight = metrics.heightPixels - 40.dp()
+
+                                var newW = initialWidth
+                                var newH = initialHeight
+                                var newX = initialX
+                                var newY = initialY
+
+                                when (resizeMode) {
+                                    RESIZE_RIGHT -> {
+                                        newW = (initialWidth + dx).coerceIn(minSize, maxWidth)
+                                    }
+                                    RESIZE_BOTTOM -> {
+                                        newH = (initialHeight + dy).coerceIn(minSize, maxHeight)
+                                    }
+                                    RESIZE_BOTTOM_RIGHT, RESIZE_ANY -> {
+                                        newW = (initialWidth + dx).coerceIn(minSize, maxWidth)
+                                        newH = (initialHeight + dy).coerceIn(minSize, maxHeight)
+                                    }
+                                    RESIZE_LEFT -> {
+                                        newW = (initialWidth - dx).coerceIn(minSize, maxWidth)
+                                        newX = initialX + (initialWidth - newW)
+                                    }
+                                    RESIZE_TOP -> {
+                                        newH = (initialHeight - dy).coerceIn(minSize, maxHeight)
+                                        newY = initialY + (initialHeight - newH)
+                                    }
+                                    RESIZE_TOP_LEFT -> {
+                                        newW = (initialWidth - dx).coerceIn(minSize, maxWidth)
+                                        newH = (initialHeight - dy).coerceIn(minSize, maxHeight)
+                                        newX = initialX + (initialWidth - newW)
+                                        newY = initialY + (initialHeight - newH)
+                                    }
+                                    RESIZE_TOP_RIGHT -> {
+                                        newW = (initialWidth + dx).coerceIn(minSize, maxWidth)
+                                        newH = (initialHeight - dy).coerceIn(minSize, maxHeight)
+                                        newY = initialY + (initialHeight - newH)
+                                    }
+                                    RESIZE_BOTTOM_LEFT -> {
+                                        newW = (initialWidth - dx).coerceIn(minSize, maxWidth)
+                                        newH = (initialHeight + dy).coerceIn(minSize, maxHeight)
+                                        newX = initialX + (initialWidth - newW)
+                                    }
+                                }
+
+                                val imgParams = imageView.layoutParams as FrameLayout.LayoutParams
+                                imgParams.width = newW
+                                imgParams.height = newH
+                                imageView.layoutParams = imgParams
+
+                                val gridParams = guideGrid.layoutParams as FrameLayout.LayoutParams
+                                gridParams.width = newW
+                                gridParams.height = newH
+                                guideGrid.layoutParams = gridParams
+
+                                imageParams.x = newX
+                                imageParams.y = newY
+                                windowManager.updateViewLayout(imageLayout, imageParams)
+                                return true
+                            }
+
+                            if (dragEnabled) {
+                                imageParams.x = initialX + (event.rawX - touchX).toInt()
+                                imageParams.y = initialY + (event.rawY - touchY).toInt()
+                                windowManager.updateViewLayout(imageLayout, imageParams)
+                                return true
+                            }
+                        }
+
+                        MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                            resizeMode = RESIZE_NONE
                             return true
                         }
                     }
@@ -363,6 +524,7 @@ class OverlayService : Service() {
     private fun resetImageTransform() {
         dragEnabled = false
         zoomEnabled = false
+        resizeEnabled = false
         scaleFactor = 1f
         rotationAngle = 0f
         mirrorX = false
@@ -374,6 +536,7 @@ class OverlayService : Service() {
         setReferenceOpacity(82)
         setContentBackgroundOpacity(0)
         guideGrid.setGuideMode(guideMode)
+        configureReferenceStage()
         applyImageFilter()
         applyImageTransform()
         updateImageTouchability()
@@ -482,6 +645,7 @@ class OverlayService : Service() {
     private fun enterDrawMode() {
         dragEnabled = false
         zoomEnabled = false
+        resizeEnabled = false
         updateImageTouchability()
         dismissPanel(animated = true)
         Toast.makeText(this, getString(R.string.msg_draw_mode), Toast.LENGTH_SHORT).show()
@@ -531,31 +695,21 @@ class OverlayService : Service() {
         }
     }
 
+    @SuppressLint("ClickableViewAccessibility")
     private fun showControlPanel() {
         dismissPanel()
 
-        val container = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(20.dp(), 18.dp(), 20.dp(), 16.dp())
-            background = roundedRect(0xF51B1D27.toInt(), 8f, 0x4433E0CC, 1f)
-        }
+        val panelLayout = LayoutInflater.from(this).inflate(R.layout.popup_control_panel, null)
 
-        val mode = TextView(this).apply {
-            setTextColor(0xFFE8F7F3.toInt())
-            textSize = 12f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            setPadding(11.dp(), 7.dp(), 11.dp(), 7.dp())
-        }
-
+        val tvModeBadge = panelLayout.findViewById<TextView>(R.id.tvModeBadge)
         fun refreshModeChip() {
-            val interactive = dragEnabled || zoomEnabled
-            mode.text = if (interactive) {
+            val interactive = dragEnabled || zoomEnabled || resizeEnabled
+            tvModeBadge.text = if (interactive) {
                 getString(R.string.cp_mode_edit)
             } else {
                 getString(R.string.cp_mode_draw)
             }
-            mode.background = roundedRect(
+            tvModeBadge.background = roundedRect(
                 if (interactive) 0x292DD4BF else 0x18FFFFFF,
                 8f,
                 if (interactive) 0x5533E0CC else 0x33FFFFFF,
@@ -564,237 +718,71 @@ class OverlayService : Service() {
         }
         refreshModeChip()
 
-        val header = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        header.addView(
-            TextView(this).apply {
-                text = getString(R.string.cp_title)
-                setTextColor(Color.WHITE)
-                textSize = 22f
-                typeface = android.graphics.Typeface.DEFAULT_BOLD
-            },
-            LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        )
-        header.addView(mode)
-        container.addView(header, rowParams(bottom = 10))
-
-        addSectionTitle(container, getString(R.string.cp_section_presets))
-        addButtonRow(
-            container,
-            listOf(
-                PanelButtonSpec(getString(R.string.cp_preset_trace), guideMode == GuideGridView.MODE_THIRDS) {
-                    applySoftTracePreset()
-                    Toast.makeText(this, getString(R.string.msg_preset_trace), Toast.LENGTH_SHORT).show()
-                    showControlPanel()
-                },
-                PanelButtonSpec(getString(R.string.cp_preset_line_art), grayscaleEnabled && contrastEnabled && !invertEnabled) {
-                    applyLineArtPreset()
-                    Toast.makeText(this, getString(R.string.msg_preset_line_art), Toast.LENGTH_SHORT).show()
-                    showControlPanel()
-                },
-                PanelButtonSpec(getString(R.string.cp_preset_dark_canvas), invertEnabled) {
-                    applyDarkCanvasPreset()
-                    Toast.makeText(this, getString(R.string.msg_preset_dark_canvas), Toast.LENGTH_SHORT).show()
-                    showControlPanel()
-                }
-            )
-        )
-        addButtonRow(
-            container,
-            listOf(
-                PanelButtonSpec(getString(R.string.cp_preset_clean), guideMode == GuideGridView.MODE_OFF && !grayscaleEnabled && !contrastEnabled && !invertEnabled) {
-                    applyCleanPreset()
-                    Toast.makeText(this, getString(R.string.msg_preset_clean), Toast.LENGTH_SHORT).show()
-                    showControlPanel()
-                },
-                PanelButtonSpec(getString(R.string.cp_quick_fit)) { fitOverlayToScreen() },
-                PanelButtonSpec(getString(R.string.cp_quick_center)) { centerOverlay() }
-            )
-        )
-        addHoldButton(
-            container,
-            getString(R.string.cp_peek_original),
-            holdStart = { beginPeekOriginal() },
-            holdEnd = { endPeekOriginal() }
-        )
-
-        addSectionTitle(container, getString(R.string.cp_section_place))
-        addSwitchRow(container, getString(R.string.cp_drag), getString(R.string.cp_drag_sub), dragEnabled) {
-            dragEnabled = it
-            updateImageTouchability()
-            refreshModeChip()
-        }
-        addSwitchRow(container, getString(R.string.cp_zoom), getString(R.string.cp_zoom_sub), zoomEnabled) {
-            zoomEnabled = it
-            updateImageTouchability()
-            refreshModeChip()
-        }
-
-        addButtonRow(
-            container,
-            listOf(
-                PanelButtonSpec(getString(R.string.cp_rotate_left)) { rotateOverlay(-15f) },
-                PanelButtonSpec(getString(R.string.cp_rotate_reset), rotationAngle == 0f) {
-                    rotationAngle = 0f
-                    applyImageTransform()
-                },
-                PanelButtonSpec(getString(R.string.cp_rotate_right)) { rotateOverlay(15f) }
-            )
-        )
-        addButtonRow(
-            container,
-            listOf(
-                PanelButtonSpec(getString(R.string.cp_mirror), mirrorX) {
-                    mirrorX = !mirrorX
-                    applyImageTransform()
-                    showControlPanel()
-                },
-                PanelButtonSpec(getString(R.string.cp_quick_reset)) {
-                    resetImageTransform()
-                    showControlPanel()
-                }
-            )
-        )
-
-        addSectionTitle(container, getString(R.string.cp_section_look))
-        addSlider(
-            container,
-            getString(R.string.cp_transparency),
-            referenceOpacity,
-            0,
-            100
-        ) { value ->
-            setReferenceOpacity(value)
-        }
-
-        addSlider(container, getString(R.string.cp_size), (scaleFactor * 100).toInt(), 20, 400) { value ->
-            scaleFactor = value / 100f
-            applyImageTransform()
-        }
-
-        addButtonRow(
-            container,
-            listOf(
-                PanelButtonSpec(getString(R.string.cp_grayscale), grayscaleEnabled) {
-                    grayscaleEnabled = !grayscaleEnabled
-                    applyImageFilter()
-                    showControlPanel()
-                },
-                PanelButtonSpec(getString(R.string.cp_contrast), contrastEnabled) {
-                    contrastEnabled = !contrastEnabled
-                    applyImageFilter()
-                    showControlPanel()
-                },
-                PanelButtonSpec(getString(R.string.cp_invert), invertEnabled) {
-                    invertEnabled = !invertEnabled
-                    applyImageFilter()
-                    showControlPanel()
-                }
-            )
-        )
-        addButtonRow(
-            container,
-            listOf(
-                PanelButtonSpec(getString(R.string.cp_guide_off), guideMode == GuideGridView.MODE_OFF) {
-                    setGuideMode(GuideGridView.MODE_OFF)
-                    showControlPanel()
-                },
-                PanelButtonSpec(getString(R.string.cp_guide_grid), guideMode == GuideGridView.MODE_GRID) {
-                    setGuideMode(GuideGridView.MODE_GRID)
-                    showControlPanel()
-                },
-                PanelButtonSpec(getString(R.string.cp_guide_thirds), guideMode == GuideGridView.MODE_THIRDS) {
-                    setGuideMode(GuideGridView.MODE_THIRDS)
-                    showControlPanel()
-                }
-            )
-        )
-
-        addSectionTitle(container, getString(R.string.cp_section_finish))
-        addButtonRow(
-            container,
-            listOf(
-                PanelButtonSpec(getString(R.string.cp_draw_mode), true) { enterDrawMode() },
-                PanelButtonSpec(getString(R.string.cp_done), true) { dismissPanel(animated = true) },
-                PanelButtonSpec(getString(R.string.cp_close), danger = true) {
-                    dismissPanel()
-                    stopSelf()
-                }
-            ),
-            bottom = 0
-        )
-
-        val scrollView = ScrollView(this).apply {
-            isFillViewport = false
-            overScrollMode = View.OVER_SCROLL_IF_CONTENT_SCROLLS
-            addView(
-                container,
-                ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-                )
-            )
-        }
-
-        showSystemPanel(scrollView)
-    }
-
-    private fun addSectionTitle(parent: LinearLayout, text: String) {
-        parent.addView(
-            TextView(this).apply {
-                this.text = text
-                setTextColor(0xFFFFD166.toInt())
-                textSize = 12f
-                typeface = android.graphics.Typeface.DEFAULT_BOLD
-                setPadding(2.dp(), 8.dp(), 2.dp(), 8.dp())
-            },
-            rowParams(top = 2, bottom = 2)
-        )
-    }
-
-    private fun addButtonRow(
-        parent: LinearLayout,
-        buttons: List<PanelButtonSpec>,
-        top: Int = 0,
-        bottom: Int = 10
-    ) {
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            isBaselineAligned = false
-            weightSum = buttons.size.toFloat()
-        }
-
-        buttons.forEachIndexed { index, spec ->
-            val params = LinearLayout.LayoutParams(0, 48.dp(), 1f).apply {
-                if (index > 0) marginStart = 5.dp()
-                if (index < buttons.lastIndex) marginEnd = 5.dp()
+        fun setupPanelButton(
+            button: Button?,
+            selected: Boolean = false,
+            danger: Boolean = false,
+            onClick: () -> Unit
+        ) {
+            val btn = button ?: return
+            btn.setTextColor(Color.BLACK)
+            if (danger) {
+                btn.background = ContextCompat.getDrawable(this, R.drawable.brutal_button_pink)
+            } else if (selected) {
+                btn.background = ContextCompat.getDrawable(this, R.drawable.brutal_button_yellow)
+            } else {
+                btn.background = ContextCompat.getDrawable(this, R.drawable.button_secondary)
             }
-            row.addView(
-                makePanelButton(spec.text, spec.filled, spec.danger, spec.action),
-                params
-            )
+
+            UiEffects.applyPressAnimation(btn)
+            btn.setOnClickListener {
+                btn.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                onClick()
+            }
         }
 
-        parent.addView(row, rowParams(top = top, bottom = bottom))
-    }
+        // Section: CREATIVE MODES
+        val btnPresetTrace = panelLayout.findViewById<Button>(R.id.btnPresetTrace)
+        val btnPresetLineArt = panelLayout.findViewById<Button>(R.id.btnPresetLineArt)
+        val btnPresetDarkCanvas = panelLayout.findViewById<Button>(R.id.btnPresetDarkCanvas)
+        val btnPresetClean = panelLayout.findViewById<Button>(R.id.btnPresetClean)
+        val btnQuickFit = panelLayout.findViewById<Button>(R.id.btnQuickFit)
+        val btnQuickCenter = panelLayout.findViewById<Button>(R.id.btnQuickCenter)
+        val btnPeekOriginal = panelLayout.findViewById<Button>(R.id.btnPeekOriginal)
 
-    @SuppressLint("ClickableViewAccessibility")
-    private fun addHoldButton(
-        parent: LinearLayout,
-        text: String,
-        holdStart: () -> Unit,
-        holdEnd: () -> Unit,
-        bottom: Int = 10
-    ) {
-        var holding = false
-        val button = makePanelButton(text, filled = true) {}
-        button.textSize = 15f
-        button.setOnTouchListener { view, event ->
+        setupPanelButton(btnPresetTrace, guideMode == GuideGridView.MODE_THIRDS) {
+            applySoftTracePreset()
+            Toast.makeText(this, getString(R.string.msg_preset_trace), Toast.LENGTH_SHORT).show()
+            showControlPanel()
+        }
+        setupPanelButton(btnPresetLineArt, grayscaleEnabled && contrastEnabled && !invertEnabled) {
+            applyLineArtPreset()
+            Toast.makeText(this, getString(R.string.msg_preset_line_art), Toast.LENGTH_SHORT).show()
+            showControlPanel()
+        }
+        setupPanelButton(btnPresetDarkCanvas, invertEnabled) {
+            applyDarkCanvasPreset()
+            Toast.makeText(this, getString(R.string.msg_preset_dark_canvas), Toast.LENGTH_SHORT).show()
+            showControlPanel()
+        }
+        setupPanelButton(
+            btnPresetClean,
+            guideMode == GuideGridView.MODE_OFF && !grayscaleEnabled && !contrastEnabled && !invertEnabled
+        ) {
+            applyCleanPreset()
+            Toast.makeText(this, getString(R.string.msg_preset_clean), Toast.LENGTH_SHORT).show()
+            showControlPanel()
+        }
+        setupPanelButton(btnQuickFit) { fitOverlayToScreen() }
+        setupPanelButton(btnQuickCenter) { centerOverlay() }
+
+        var holdingPeek = false
+        setupPanelButton(btnPeekOriginal, selected = true) {}
+        btnPeekOriginal.textSize = 15f
+        btnPeekOriginal.setOnTouchListener { view, event ->
             when (event.actionMasked) {
                 MotionEvent.ACTION_DOWN -> {
-                    holding = true
+                    holdingPeek = true
                     view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
                     view.animate()
                         .scaleX(0.98f)
@@ -802,14 +790,14 @@ class OverlayService : Service() {
                         .alpha(0.9f)
                         .setDuration(80)
                         .start()
-                    holdStart()
+                    beginPeekOriginal()
                     true
                 }
 
                 MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    if (holding) {
-                        holding = false
-                        holdEnd()
+                    if (holdingPeek) {
+                        holdingPeek = false
+                        endPeekOriginal()
                     }
                     view.animate()
                         .scaleX(1f)
@@ -824,178 +812,153 @@ class OverlayService : Service() {
             }
         }
 
-        parent.addView(button, rowParams(bottom = bottom).apply { height = 50.dp() })
-    }
-
-    private fun addSwitchRow(
-        parent: LinearLayout,
-        title: String,
-        subtitle: String,
-        checked: Boolean,
-        onChanged: (Boolean) -> Unit
-    ) {
-        var current = checked
-        val row = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-            setPadding(14.dp(), 11.dp(), 10.dp(), 11.dp())
-            background = roundedRect(0x18FFFFFF, 8f, 0x24FFFFFF, 1f)
-            isClickable = true
-        }
-
-        val copy = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-        }
-
-        copy.addView(TextView(this).apply {
-            text = title
-            setTextColor(Color.WHITE)
-            textSize = 16f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-        })
-
-        copy.addView(TextView(this).apply {
-            text = subtitle
-            setTextColor(0xBDECECF0.toInt())
-            textSize = 12f
-        })
-
-        val toggle = TextView(this).apply {
-            minWidth = 62.dp()
-            gravity = Gravity.CENTER
-            textSize = 12f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            setPadding(10.dp(), 8.dp(), 10.dp(), 8.dp())
-        }
-
-        fun renderToggle() {
-            toggle.text = getString(if (current) R.string.cp_toggle_on else R.string.cp_toggle_off)
-            toggle.setTextColor(if (current) 0xFF0F2F2B.toInt() else 0xFFECECF0.toInt())
-            toggle.background = if (current) {
-                roundedRect(0xFF2DD4BF.toInt(), 8f, 0xFFFFFFFF.toInt(), 1f)
-            } else {
-                roundedRect(0x22FFFFFF, 8f, 0x44FFFFFF, 1f)
+        // Section: PLACE
+        fun setupSwitchRow(
+            row: View,
+            toggleText: TextView,
+            getChecked: () -> Boolean,
+            setChecked: (Boolean) -> Unit
+        ) {
+            fun renderToggle() {
+                val checked = getChecked()
+                toggleText.text = getString(if (checked) R.string.cp_toggle_on else R.string.cp_toggle_off)
+                toggleText.setTextColor(if (checked) 0xFF0F2F2B.toInt() else 0xFFECECF0.toInt())
+                toggleText.background = if (checked) {
+                    roundedRect(0xFF2DD4BF.toInt(), 8f, 0xFFFFFFFF.toInt(), 1f)
+                } else {
+                    roundedRect(0x22FFFFFF, 8f, 0x44FFFFFF, 1f)
+                }
             }
-        }
-
-        row.setOnClickListener {
-            row.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-            current = !current
             renderToggle()
-            onChanged(current)
-        }
-        renderToggle()
-
-        row.addView(copy, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        row.addView(toggle)
-        parent.addView(row, rowParams(bottom = 10))
-    }
-
-    private fun addSlider(
-        parent: LinearLayout,
-        title: String,
-        initialValue: Int,
-        minimum: Int,
-        maximum: Int,
-        onChanged: (Int) -> Unit
-    ) {
-        val safeInitial = initialValue.coerceIn(minimum, maximum)
-        val section = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(14.dp(), 12.dp(), 14.dp(), 10.dp())
-            background = roundedRect(0x12FFFFFF, 8f, 0x22FFFFFF, 1f)
-        }
-
-        val labelRow = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-
-        val label = TextView(this).apply {
-            text = title
-            setTextColor(Color.WHITE)
-            textSize = 15f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-        }
-
-        val value = TextView(this).apply {
-            text = getString(R.string.cp_percent_value, safeInitial)
-            setTextColor(0xFFFFD166.toInt())
-            textSize = 13f
-        }
-
-        labelRow.addView(label, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
-        labelRow.addView(value)
-        section.addView(labelRow)
-
-        val slider = SeekBar(this).apply {
-            max = maximum - minimum
-            progress = safeInitial - minimum
-            setPadding(0, 8.dp(), 0, 0)
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                    val current = minimum + progress
-                    value.text = getString(R.string.cp_percent_value, current)
-                    onChanged(current)
-                }
-
-                override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
-                override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
-            })
-        }
-        section.addView(slider)
-        parent.addView(section, rowParams(bottom = 10))
-    }
-
-    @SuppressLint("ClickableViewAccessibility")
-    private fun makePanelButton(
-        text: String,
-        filled: Boolean,
-        danger: Boolean = false,
-        onClick: () -> Unit
-    ): Button {
-        return Button(this).apply {
-            this.text = text
-            textSize = if (text.length > 10) 12f else 13.5f
-            setAllCaps(false)
-            gravity = Gravity.CENTER
-            minHeight = 0
-            minWidth = 0
-            maxLines = 2
-            includeFontPadding = false
-            setTextColor(Color.WHITE)
-            setPadding(6.dp(), 0, 6.dp(), 0)
-            background = when {
-                danger -> roundedRect(0xFF3E2430.toInt(), 8f, 0xFFFF6B6B.toInt(), 1f)
-                filled -> GradientDrawable(
-                    GradientDrawable.Orientation.LEFT_RIGHT,
-                    intArrayOf(0xFFFF6B6B.toInt(), 0xFF2DD4BF.toInt())
-                ).apply { cornerRadius = 8f.dp() }
-                else -> roundedRect(0x16FFFFFF, 8f, 0x38FFFFFF, 1f)
-            }
-            setOnTouchListener { view, event ->
-                when (event.actionMasked) {
-                    MotionEvent.ACTION_DOWN -> view.animate()
-                        .scaleX(0.96f)
-                        .scaleY(0.96f)
-                        .alpha(0.86f)
-                        .setDuration(70)
-                        .start()
-
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> view.animate()
-                        .scaleX(1f)
-                        .scaleY(1f)
-                        .alpha(1f)
-                        .setDuration(110)
-                        .start()
-                }
-                false
-            }
-            setOnClickListener {
-                performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
-                onClick()
+            row.setOnClickListener {
+                row.performHapticFeedback(HapticFeedbackConstants.VIRTUAL_KEY)
+                val newChecked = !getChecked()
+                setChecked(newChecked)
+                renderToggle()
+                updateImageTouchability()
+                refreshModeChip()
             }
         }
+
+        val rowDrag = panelLayout.findViewById<View>(R.id.rowDrag)
+        val btnToggleDrag = panelLayout.findViewById<TextView>(R.id.btnToggleDrag)
+        setupSwitchRow(rowDrag, btnToggleDrag, { dragEnabled }) { dragEnabled = it }
+
+        val rowZoom = panelLayout.findViewById<View>(R.id.rowZoom)
+        val btnToggleZoom = panelLayout.findViewById<TextView>(R.id.btnToggleZoom)
+        setupSwitchRow(rowZoom, btnToggleZoom, { zoomEnabled }) { zoomEnabled = it }
+
+        val rowResize = panelLayout.findViewById<View>(R.id.rowResize)
+        val btnToggleResize = panelLayout.findViewById<TextView>(R.id.btnToggleResize)
+        setupSwitchRow(rowResize, btnToggleResize, { resizeEnabled }) { resizeEnabled = it }
+
+        val btnRotateLeft = panelLayout.findViewById<Button>(R.id.btnRotateLeft)
+        val btnRotateReset = panelLayout.findViewById<Button>(R.id.btnRotateReset)
+        val btnRotateRight = panelLayout.findViewById<Button>(R.id.btnRotateRight)
+        val btnMirror = panelLayout.findViewById<Button>(R.id.btnMirror)
+        val btnQuickReset = panelLayout.findViewById<Button>(R.id.btnQuickReset)
+
+        setupPanelButton(btnRotateLeft) { rotateOverlay(-15f) }
+        setupPanelButton(btnRotateReset, rotationAngle == 0f) {
+            rotationAngle = 0f
+            applyImageTransform()
+        }
+        setupPanelButton(btnRotateRight) { rotateOverlay(15f) }
+        setupPanelButton(btnMirror, mirrorX) {
+            mirrorX = !mirrorX
+            applyImageTransform()
+            showControlPanel()
+        }
+        setupPanelButton(btnQuickReset) {
+            resetImageTransform()
+            showControlPanel()
+        }
+
+        // Section: LOOK
+        val tvOpacityValue = panelLayout.findViewById<TextView>(R.id.tvOpacityValue)
+        val sbOpacity = panelLayout.findViewById<SeekBar>(R.id.sbOpacity)
+        val safeOpacity = referenceOpacity.coerceIn(0, 100)
+        tvOpacityValue.text = getString(R.string.cp_percent_value, safeOpacity)
+        sbOpacity.max = 100
+        sbOpacity.progress = safeOpacity
+        sbOpacity.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                tvOpacityValue.text = getString(R.string.cp_percent_value, progress)
+                setReferenceOpacity(progress)
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+        })
+
+        val tvSizeValue = panelLayout.findViewById<TextView>(R.id.tvSizeValue)
+        val sbSize = panelLayout.findViewById<SeekBar>(R.id.sbSize)
+        val safeScale = (scaleFactor * 100).toInt().coerceIn(20, 400)
+        tvSizeValue.text = getString(R.string.cp_percent_value, safeScale)
+        sbSize.max = 380
+        sbSize.progress = safeScale - 20
+        sbSize.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                val current = 20 + progress
+                tvSizeValue.text = getString(R.string.cp_percent_value, current)
+                scaleFactor = current / 100f
+                applyImageTransform()
+            }
+
+            override fun onStartTrackingTouch(seekBar: SeekBar?) = Unit
+            override fun onStopTrackingTouch(seekBar: SeekBar?) = Unit
+        })
+
+        val btnGrayscale = panelLayout.findViewById<Button>(R.id.btnGrayscale)
+        val btnContrast = panelLayout.findViewById<Button>(R.id.btnContrast)
+        val btnInvert = panelLayout.findViewById<Button>(R.id.btnInvert)
+
+        setupPanelButton(btnGrayscale, grayscaleEnabled) {
+            grayscaleEnabled = !grayscaleEnabled
+            applyImageFilter()
+            showControlPanel()
+        }
+        setupPanelButton(btnContrast, contrastEnabled) {
+            contrastEnabled = !contrastEnabled
+            applyImageFilter()
+            showControlPanel()
+        }
+        setupPanelButton(btnInvert, invertEnabled) {
+            invertEnabled = !invertEnabled
+            applyImageFilter()
+            showControlPanel()
+        }
+
+        val btnGuideOff = panelLayout.findViewById<Button>(R.id.btnGuideOff)
+        val btnGuideGrid = panelLayout.findViewById<Button>(R.id.btnGuideGrid)
+        val btnGuideThirds = panelLayout.findViewById<Button>(R.id.btnGuideThirds)
+
+        setupPanelButton(btnGuideOff, guideMode == GuideGridView.MODE_OFF) {
+            setGuideMode(GuideGridView.MODE_OFF)
+            showControlPanel()
+        }
+        setupPanelButton(btnGuideGrid, guideMode == GuideGridView.MODE_GRID) {
+            setGuideMode(GuideGridView.MODE_GRID)
+            showControlPanel()
+        }
+        setupPanelButton(btnGuideThirds, guideMode == GuideGridView.MODE_THIRDS) {
+            setGuideMode(GuideGridView.MODE_THIRDS)
+            showControlPanel()
+        }
+
+        // Section: FINISH
+        val btnDrawMode = panelLayout.findViewById<Button>(R.id.btnDrawMode)
+        val btnDone = panelLayout.findViewById<Button>(R.id.btnDone)
+        val btnClose = panelLayout.findViewById<Button>(R.id.btnClose)
+
+        setupPanelButton(btnDrawMode, selected = true) { enterDrawMode() }
+        setupPanelButton(btnDone, selected = true) { dismissPanel(animated = true) }
+        setupPanelButton(btnClose, danger = true) {
+            dismissPanel()
+            stopSelf()
+        }
+
+        showSystemPanel(panelLayout)
     }
 
     private fun showSystemPanel(view: View) {
@@ -1020,14 +983,14 @@ class OverlayService : Service() {
         panelView = view
         windowManager.addView(view, params)
         view.alpha = 0f
-        view.scaleX = 0.97f
-        view.scaleY = 0.97f
+        view.scaleX = 0.90f
+        view.scaleY = 0.90f
         view.animate()
             .alpha(1f)
             .scaleX(1f)
             .scaleY(1f)
-            .setDuration(220)
-            .setInterpolator(DecelerateInterpolator())
+            .setDuration(280)
+            .setInterpolator(OvershootInterpolator(1.2f))
             .start()
     }
 
