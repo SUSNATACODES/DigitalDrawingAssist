@@ -1,125 +1,126 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:background="@color/brutal_cream"
     tools:context=".SplashActivity">
 
-    <!-- Animated Backdrop -->
     <com.susnatacodes.digitaldrawingassist.SketchBackdropView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:importantForAccessibility="no" />
 
-    <!-- Center Brutalist Splash Card -->
-    <LinearLayout
-        android:id="@+id/splashCard"
-        android:layout_width="320dp"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:background="@drawable/brutal_card"
-        android:orientation="vertical"
-        android:paddingStart="24dp"
-        android:paddingTop="28dp"
-        android:paddingEnd="24dp"
-        android:paddingBottom="28dp">
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/splashScrollView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clipToPadding="false"
+        android:fillViewport="true"
+        android:paddingStart="16dp"
+        android:paddingTop="20dp"
+        android:paddingEnd="16dp"
+        android:paddingBottom="20dp">
 
-        <!-- Top Badge -->
-        <TextView
-            android:id="@+id/splashBadge"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:background="@drawable/brutal_button_pink"
-            android:fontFamily="sans-serif"
-            android:letterSpacing="0.08"
-            android:paddingStart="14dp"
-            android:paddingTop="6dp"
-            android:paddingEnd="14dp"
-            android:paddingBottom="6dp"
-            android:text="SUSNATA CODES"
-            android:textColor="@color/black"
-            android:textSize="12sp"
-            android:textStyle="bold"
-            android:textFontWeight="900"
-            tools:targetApi="28" />
-
-        <!-- Icon Container -->
+        <!-- fillViewport expands this frame to center the card when space allows; short screens can scroll. -->
         <FrameLayout
-            android:id="@+id/splashIconFrame"
-            android:layout_width="100dp"
-            android:layout_height="100dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginTop="20dp">
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
 
-            <ImageView
-                android:id="@+id/splashLogo"
+            <LinearLayout
+                android:id="@+id/splashCard"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:contentDescription="@string/app_name"
-                android:src="@drawable/ic_app_logo" />
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:background="@drawable/brutal_card"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:paddingStart="22dp"
+                android:paddingTop="24dp"
+                android:paddingEnd="22dp"
+                android:paddingBottom="22dp"
+                tools:ignore="UselessParent">
+
+                <TextView
+                    android:id="@+id/splashBadge"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/chip_warm"
+                    android:fontFamily="sans-serif"
+                    android:letterSpacing="0.08"
+                    android:paddingStart="12dp"
+                    android:paddingTop="6dp"
+                    android:paddingEnd="12dp"
+                    android:paddingBottom="6dp"
+                    android:text="@string/splash_brand"
+                    android:textColor="@color/dda_coral"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <ImageView
+                    android:id="@+id/splashLogo"
+                    android:layout_width="92dp"
+                    android:layout_height="92dp"
+                    android:layout_marginTop="18dp"
+                    android:contentDescription="@string/app_name"
+                    android:scaleType="fitCenter"
+                    android:src="@drawable/ic_app_logo" />
+
+                <TextView
+                    android:id="@+id/splashTitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:fontFamily="sans-serif"
+                    android:gravity="center"
+                    android:letterSpacing="-0.02"
+                    android:lineSpacingExtra="1dp"
+                    android:text="@string/splash_title"
+                    android:textColor="@color/black"
+                    android:textSize="26sp"
+                    android:textStyle="bold"
+                    android:textFontWeight="900"
+                    tools:targetApi="28" />
+
+                <TextView
+                    android:id="@+id/splashSubtitle"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="6dp"
+                    android:fontFamily="sans-serif"
+                    android:gravity="center"
+                    android:letterSpacing="0.04"
+                    android:text="@string/splash_tagline"
+                    android:textColor="@color/dda_muted"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/splashProgressText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:fontFamily="sans-serif"
+                    android:gravity="center"
+                    android:letterSpacing="0.06"
+                    android:text="@string/splash_progress"
+                    android:textColor="@color/dda_muted"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <FrameLayout
+                    android:id="@+id/splashProgressContainer"
+                    android:layout_width="match_parent"
+                    android:layout_height="18dp"
+                    android:layout_marginTop="8dp"
+                    android:background="@drawable/brutal_input"
+                    android:padding="4dp">
+
+                    <View
+                        android:id="@+id/splashProgressBar"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:background="@color/brutal_green"
+                        android:importantForAccessibility="no" />
+                </FrameLayout>
+            </LinearLayout>
         </FrameLayout>
-
-        <!-- Title -->
-        <TextView
-            android:id="@+id/splashTitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:fontFamily="sans-serif"
-            android:gravity="center"
-            android:letterSpacing="-0.02"
-            android:lineSpacingExtra="2dp"
-            android:text="DIGITAL DRAWING\nASSIST."
-            android:textColor="@color/black"
-            android:textSize="24sp"
-            android:textStyle="bold"
-            android:textFontWeight="900"
-            tools:targetApi="28" />
-
-        <TextView
-            android:id="@+id/splashSubtitle"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:fontFamily="sans-serif"
-            android:textStyle="bold"
-            android:gravity="center"
-            android:letterSpacing="0.05"
-            android:text="TRACE · SKETCH · OVERLAY"
-            android:textColor="@color/dda_muted"
-            android:textSize="11sp" />
-
-        <!-- Brutalist Loading Bar -->
-        <FrameLayout
-            android:id="@+id/splashProgressContainer"
-            android:layout_width="match_parent"
-            android:layout_height="22dp"
-            android:layout_marginTop="24dp"
-            android:background="@drawable/brutal_input">
-
-            <View
-                android:id="@+id/splashProgressBar"
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:background="@color/brutal_green" />
-
-            <TextView
-                android:id="@+id/splashProgressText"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                android:fontFamily="sans-serif"
-                android:gravity="center"
-                android:letterSpacing="0.08"
-                android:text="LOADING ENGINE..."
-                android:textColor="@color/black"
-            android:textSize="10sp"
-            android:textStyle="bold"
-            android:textFontWeight="900"
-            tools:targetApi="28" />
-        </FrameLayout>
-
-    </LinearLayout>
-
-</FrameLayout>
+    </androidx.core.widget.NestedScrollView>
+</merge>

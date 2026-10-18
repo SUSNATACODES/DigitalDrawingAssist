@@ -1,14 +1,57 @@
 package com.susnatacodes.digitaldrawingassist
 
-import android.R
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.animation.StateListAnimator
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.updatePadding
+import kotlin.math.roundToInt
 
 object UiEffects {
+
+    fun applySafeWindowInsets(view: View) {
+        val initialLeft = view.paddingLeft
+        val initialTop = view.paddingTop
+        val initialRight = view.paddingRight
+        val initialBottom = view.paddingBottom
+
+        ViewCompat.setOnApplyWindowInsetsListener(view) { target, windowInsets ->
+            val safeInsets = windowInsets.getInsets(
+                WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.displayCutout(),
+            )
+            target.updatePadding(
+                left = initialLeft + safeInsets.left,
+                top = initialTop + safeInsets.top,
+                right = initialRight + safeInsets.right,
+                bottom = initialBottom + safeInsets.bottom,
+            )
+            windowInsets
+        }
+        ViewCompat.requestApplyInsets(view)
+    }
+
+    fun constrainWidthToViewport(view: View, viewport: View, maxWidthDp: Int) {
+        val maxWidthPx = (maxWidthDp * view.resources.displayMetrics.density).roundToInt()
+        val updateWidth = {
+            val availableWidth = (viewport.width - viewport.paddingLeft - viewport.paddingRight)
+                .coerceAtLeast(0)
+            if (availableWidth > 0) {
+                val targetWidth = minOf(maxWidthPx, availableWidth)
+                val params = view.layoutParams
+                if (params != null && params.width != targetWidth) {
+                    params.width = targetWidth
+                    view.layoutParams = params
+                }
+            }
+        }
+
+        viewport.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> updateWidth() }
+        viewport.post { updateWidth() }
+    }
 
     fun applyPressAnimation(vararg views: View) {
         views.forEach { view ->
@@ -39,7 +82,7 @@ object UiEffects {
                 interpolator = OvershootInterpolator(1.4f)
             }
 
-            stateListAnimator.addState(intArrayOf(R.attr.state_pressed), pressedSet)
+            stateListAnimator.addState(intArrayOf(android.R.attr.state_pressed), pressedSet)
             stateListAnimator.addState(intArrayOf(), defaultSet)
 
             view.stateListAnimator = stateListAnimator

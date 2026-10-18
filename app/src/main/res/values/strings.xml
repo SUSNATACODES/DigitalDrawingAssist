@@ -1,5 +1,24 @@
 <resources>
     <string name="app_name">Digital Drawing Assist</string>
+    <string name="splash_brand">SUSNATA CODES</string>
+    <string name="splash_title">DIGITAL DRAWING\nASSIST.</string>
+    <string name="splash_tagline">TRACE · SKETCH · OVERLAY</string>
+    <string name="splash_progress">SETTING UP YOUR STUDIO</string>
+    <string name="permission_eyebrow">FIRST-TIME SETUP</string>
+    <string name="permission_title">Keep your reference\nabove your canvas.</string>
+    <string name="permission_intro">Overlay access keeps the image you choose visible above your drawing app while you sketch.</string>
+    <string name="permission_card_eyebrow">ONE QUICK ANDROID SETTING</string>
+    <string name="permission_card_title">Display over other apps</string>
+    <string name="permission_step_one">Tap the button below to open Android settings.</string>
+    <string name="permission_step_two">Choose Digital Drawing Assist and allow display over other apps.</string>
+    <string name="permission_step_three">Come back here. The studio opens as soon as access is enabled.</string>
+    <string name="permission_step_number_one">01</string>
+    <string name="permission_step_number_two">02</string>
+    <string name="permission_step_number_three">03</string>
+    <string name="permission_open_settings">Open overlay settings</string>
+    <string name="permission_settings_unavailable">Could not open overlay settings. Find it under Android Settings → Apps → Special app access.</string>
+    <string name="permission_return_hint">Android will bring you back here after you enable access.</string>
+    <string name="permission_privacy_note">The overlay shows the image you choose. It does not record your screen.</string>
     <string name="nav_studio">Studio</string>
     <string name="nav_canvas">Canvas</string>
     <string name="nav_guide">Guide</string>
